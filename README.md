@@ -1,3 +1,5 @@
+# Noms : Patrick Osornio et Timothee Mac Garry
+
 # AIPS
 ## TPs AIPS - 3 MIC
 
