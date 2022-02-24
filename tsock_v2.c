@@ -116,7 +116,7 @@ int main (int argc, char **argv)
 			envoi_udp(sock,adr_distant,30, nb_message);
 		}
 		else{ //cote client (processus appelant)
-			client_tcp(sock, adr_distant, 30, nb_message); //je me dits qu'il faudrait peut etre faire un malloc et de passer cette adresse la au lieu de l'adresse de l'adresse distante directe car il y a un echec de connexion lors du client_tcp()
+			client_tcp(sock, adr_distant, 30, nb_message);
 		}
 
         if (close(sock) == -1){
