@@ -80,10 +80,10 @@ int main (int argc, char **argv)
 	}
 
 	if (nb_message != -1) {
-			if (source == 1)
-				printf("nb de tampons à envoyer : %d\n", nb_message);
-			else
-				printf("nb de tampons à recevoir : %d\n", nb_message);
+		if (source == 1)
+			printf("nb de tampons à envoyer : %d\n", nb_message);
+		else
+			printf("nb de tampons à recevoir : %d\n", nb_message);
 	} 
 	else {
 		if (source == 1) {
@@ -119,169 +119,168 @@ int main (int argc, char **argv)
 			client_tcp(sock, adr_distant, 30, nb_message);
 		}
 
-        if (close(sock) == -1){
-            printf("Echec de la destruction du socket\n"); 
-        } 
-    }
+		if (close(sock) == -1){
+		    printf("Echec de la destruction du socket\n"); 
+		} 
+	}
 
 
 	else {
 		printf("on est dans le puits\n");
-        if (protocol == 'u'){
-            recv_udp(atoi(dest));
-        } 
+		if (protocol == 'u'){
+			recv_udp(atoi(dest));
+       		} 
 		else {
-            serveur_tcp(atoi(dest), nb_message);
-        } 
+            		serveur_tcp(atoi(dest), nb_message);
+        	} 
 	}
 
 return 0;
+} //fin du main
 
+int creer_socket(char protocol){
+	int type;
+	int protocole;
+	int sock;
+	
+	if (protocol=='u'){
+		type=SOCK_DGRAM;
+		protocole= IPPROTO_UDP;
+	}
+	else if (protocol=='t'){
+		type=SOCK_STREAM;
+		protocole= 0;
+	}
+	if ((sock = socket(AF_INET, type, protocole)) == -1){
+		printf("Echec de la creation du socket\n");
+	}
+	return sock;
 }
-	int creer_socket(char protocol){
-		int type;
-		int protocole;
-        int sock;
-		if (protocol=='u'){
-			type=SOCK_DGRAM;
-			protocole= IPPROTO_UDP;
-		}
-		else if (protocol=='t'){
-			type=SOCK_STREAM;
-			protocole= 0;
-		}
-        if ((sock = socket(AF_INET, type, protocole)) == -1){
-            printf("Echec de la creation du socket\n");
-        } 
-		return sock;
-	}
 
-	char* construire_message(char* message,int lg, char motif) {
+char* construire_message(char* message,int lg, char motif) {
+	int i;
+	for (i=0;i<lg;i++) message[i] = motif;
+	return message; 
+}
 	
-		int i;
-		for (i=0;i<lg;i++) message[i] = motif;
-		return message; 
-		}
+void afficher_message(char *message, int lg) {
+	int i;
+	printf("message construit : "); 
 	
-	void afficher_message(char *message, int lg) {
-		int i;
-        printf("message construit : "); 
-		for (i=0;i<lg;i++) {
-            printf("%c", message[i]);
-		} 
-        printf("\n");
+	for (i=0;i<lg;i++) {
+		printf("%c", message[i]);
+	} 
+	printf("\n");
+}
 
+void envoi_udp(int sock,struct sockaddr_in addresse_dest,int lg_m, int nb_messages ){
+	char *msg = malloc(sizeof(lg_m*sizeof(char)));
+	
+	for (int i=0; i<nb_messages; i++){
+	    msg = construire_message(msg, lg_m, (char)(i+97));
+	    sendto(sock,msg,lg_m,0,(struct sockaddr*)&addresse_dest,sizeof(addresse_dest));
+	    afficher_message(msg,lg_m);
+	} 
+}
+
+void recv_udp(int num_port){
+	int lg_m = 30;
+	int sock_local= creer_socket('u');
+	struct sockaddr_in addr_local;
+
+	memset((char *)& addr_local, 0, sizeof(addr_local)) ;
+
+	addr_local.sin_family = AF_INET ; /* domaine Internet */
+	addr_local.sin_port = htons(num_port) ; /* n° de port */
+	addr_local.sin_addr.s_addr = INADDR_ANY;
+	int taille=sizeof(addr_local);
+
+	char* mess_recu= malloc(lg_m*sizeof(char));
+	struct sockaddr *addr_dest = malloc(sizeof(struct sockaddr));
+	int taille2=sizeof(struct sockaddr);
+
+	if (bind(sock_local,(struct sockaddr*)&addr_local,taille) == -1){
+	    printf("Echec du bind\n");
+	    exit(1);
 	}
-
-	void envoi_udp(int sock,struct sockaddr_in addresse_dest,int lg_m, int nb_messages ){
-        char *msg = malloc(sizeof(lg_m*sizeof(char)));
-        for (int i=0; i<nb_messages; i++){
-            msg = construire_message(msg, lg_m, (char)(i+97));
-            sendto(sock,msg,lg_m,0,(struct sockaddr*)&addresse_dest,sizeof(addresse_dest));
-            afficher_message(msg,lg_m);
-        } 
+	
+	while (1) {
+		if(recvfrom(sock_local,mess_recu,lg_m,0,addr_dest,&taille2)<0){
+			perror("Erreur recvfrom");
+			exit(1);
+		}
+		afficher_message(mess_recu,30); 
 	}
+	
+	if (close(sock_local) == -1) {
+	    printf("Echec de la destruction du socket\n");
+	} 
+}
 
-	void recv_udp(int num_port){
-		int lg_m = 30;
-		int sock_local= creer_socket('u');
-		struct sockaddr_in addr_local;
+void client_tcp(int sock,struct sockaddr_in padr_serv,int lg_m, int nb_messages){
 
-		memset((char *)& addr_local, 0, sizeof(addr_local)) ;
-
-		addr_local.sin_family = AF_INET ; /* domaine Internet */
-		addr_local.sin_port = htons(num_port) ; /* n° de port */
-		addr_local.sin_addr.s_addr = INADDR_ANY;
-		int taille=sizeof(addr_local);
-
-		char* mess_recu= malloc(lg_m*sizeof(char));
-		struct sockaddr *addr_dest = malloc(sizeof(struct sockaddr));
-		int taille2=sizeof(struct sockaddr);
-		
-		if (bind(sock_local,(struct sockaddr*)&addr_local,taille) == -1){
-            printf("Echec du bind\n");
-            exit(1);
-        }
-		//DEBUG
-
-		while (1) {
-			if(recvfrom(sock_local,mess_recu,lg_m,0,addr_dest,&taille2)<0){
-				perror("Erreur recvfrom");
+	int s=-1;
+	while (s==-1){
+		if ((s = connect(sock, (struct sockaddr*)&padr_serv, sizeof(padr_serv))) == -1) {
+			printf("Echec de connexion. Retentative...\n");
+			sleep(5);
+    		}
+	}
+	char *msg = malloc(sizeof(lg_m));
+	if (s==0) {
+    		for (int i=0; i<nb_messages; i++){
+			msg = construire_message(msg,lg_m, (char)(i+97));
+			int lg_mesg;
+			if((lg_mesg = send(sock,msg,lg_m,0)) == -1){
+				printf("Echec du send\n");
 				exit(1);
-			}
-		
-			afficher_message(mess_recu,30); 
-		}
-        if (close(sock_local) == -1){
-            printf("Echec de la destruction du socket\n");
-        } 
+			} 
+			afficher_message(msg,lg_m);
+   		 } 
+	} 
+}
+
+void serveur_tcp(int num_port, int nb_messages){ //cote qui recoit l'appel de connexion (on a choisit que ce soit le processus lui meme qui traite la requete)
+	int sock_local = creer_socket('t'); //creation du socket local
+	struct sockaddr_in addr_local; //creation de l'adresse du socket
+
+	memset((char *)&addr_local, 0, sizeof(addr_local)) ;
+
+	addr_local.sin_family = AF_INET ; /* domaine Internet */
+	addr_local.sin_port = htons(num_port) ; /* n° de port */
+	addr_local.sin_addr.s_addr = INADDR_ANY;
+	int taille=sizeof(addr_local);
+	//fin de la creation de l'adresse du socket
+
+	if (bind(sock_local,(struct sockaddr*)&addr_local,taille) == -1){
+		printf("Echec du bind\n");
+		exit(1);
 	}
 
-    void client_tcp(int sock,struct sockaddr_in padr_serv,int lg_m, int nb_messages){
-		
-		int s=-1;
-		while (s==-1){
-			if ((s = connect(sock, (struct sockaddr*)&padr_serv, sizeof(padr_serv))) == -1){
-                printf("Echec de connexion. Retentative...\n");
-                sleep(5);
-            }
-		}
-        char *msg = malloc(sizeof(lg_m));
-        if (s==0) {
-            for (int i=0; i<nb_messages; i++){
-                msg = construire_message(msg,lg_m, (char)(i+97));
-                int lg_mesg;
-                if((lg_mesg = send(sock,msg,lg_m,0)) == -1){
-                    printf("Echec du send\n");
-                    exit(1);
-                } 
-                afficher_message(msg,lg_m);
-            } 
-        } 
+	if (listen(sock_local, 5) == -1){
+		printf("Trop de demandes de connexion (>5)\n");
+		exit(1);
+	} 
+
+	struct sockaddr_in adr_client;
+	int taille_client=sizeof(adr_client);
+	int sock_connexion;
+	
+	if ((sock_connexion = accept(sock_local, (struct sockaddr*)&adr_client, &taille_client)) == -1){
+		printf("Erreur de l'accept\n");
+		exit(1);
 	}
-
-    void serveur_tcp(int num_port, int nb_messages){ //cote qui recoit l'appel de connexion
-        int sock_local = creer_socket('t'); //creation du socket local
-        struct sockaddr_in addr_local; //creation de l'adresse du socket
-
-		memset((char *)&addr_local, 0, sizeof(addr_local)) ;
-
-		addr_local.sin_family = AF_INET ; /* domaine Internet */
-		addr_local.sin_port = htons(num_port) ; /* n° de port */
-		addr_local.sin_addr.s_addr = INADDR_ANY;
-		int taille=sizeof(addr_local);
-        //fin de la creation de l'adresse du socket
-
-        if (bind(sock_local,(struct sockaddr*)&addr_local,taille) == -1){
-            printf("Echec du bind\n");
-            exit(1);
-        }
-
-        if (listen(sock_local, 5) == -1){
-            printf("Trop de demandes de connexion (>5)\n");
-            exit(1);
-        } 
-
-        struct sockaddr_in adr_client;
-		int taille_client=sizeof(adr_client);
-        int sock_connexion;
-        //DEBUG
-        if ((sock_connexion = accept(sock_local, (struct sockaddr*)&adr_client, &taille_client)) == -1){
-            printf("Erreur de l'accept\n");
-            exit(1);
-        }
-        //DEBUG
-        int lg_rec;
-        int lg_max = 30;
-		int i;
-        char* mess_recu = malloc(sizeof(lg_max));
-        //DEBUG
-        for (i=0; i<nb_messages; i++){
-            //DEBUG
-            if ((lg_rec = recv(sock_connexion, mess_recu, lg_max, 0))<0){
-                printf("Echec du read\n");
-                exit(1);
-            }
-            afficher_message(mess_recu, lg_max);
-        } 
-    } 
+	
+	int lg_rec;
+	int lg_max = 30;
+	int i;
+	char* mess_recu = malloc(sizeof(lg_max));
+	
+	for (i=0; i<nb_messages; i++){
+		if ((lg_rec = recv(sock_connexion, mess_recu, lg_max, 0))<0){
+			printf("Echec du read\n");
+			exit(1);
+	    	}
+		afficher_message(mess_recu, lg_max);
+	} 
+} 
